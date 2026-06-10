@@ -184,28 +184,7 @@ function PortraitChip() {
         <div className="absolute inset-0 bg-gradient-to-br from-sky-500/10 via-transparent to-azure-700/10" />
       </div>
 
-      {/* Floating badges */}
-      <motion.div
-        animate={{ y: [0, -6, 0] }}
-        transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-        className="glass-strong absolute -left-3 top-10 hidden rounded-2xl px-3 py-2 shadow-glow sm:block"
-      >
-        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-sky-300">
-          Research Intern
-        </p>
-        <p className="text-xs text-white">AMIR Lab · 2026</p>
-      </motion.div>
 
-      <motion.div
-        animate={{ y: [0, 6, 0] }}
-        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-        className="glass-strong absolute -right-3 bottom-16 hidden rounded-2xl px-3 py-2 shadow-glow sm:block"
-      >
-        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-sky-300">
-          PhD Target · Fall 2026
-        </p>
-        <p className="text-xs text-white">Federated Learning · Medical AI</p>
-      </motion.div>
 
       {/* Bottom caption */}
       <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
