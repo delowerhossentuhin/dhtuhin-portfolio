@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import { seedCinema } from '@/data/site';
 import { CinemaGrid } from '@/components/journal/CinemaGrid';
-import { dbConnect } from '@/lib/mongodb';
+import { dbConnect, hasDatabase } from '@/lib/mongodb';
+import { CinemaEntry } from '@/models/CinemaEntry';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,25 +12,26 @@ export const metadata: Metadata = {
 };
 
 async function getEntries() {
+  if (!hasDatabase) {
+    return [...seedCinema].map((c) => ({ ...c, posterUrl: '' }));
+  }
   try {
-    const mongoose = await dbConnect();
-    const db = mongoose.connection.db;
-    if (!db) throw new Error('DB not connected');
-    const docs = await db.collection('cinemas').find({}).sort({ createdAt: -1 }).toArray();
+    await dbConnect();
+    const docs = await CinemaEntry.find().sort({ watchDate: -1, createdAt: -1 }).lean();
     if (docs.length > 0) {
-      return docs.map((d) => ({
-        id: (d._id as { toString(): string }).toString(),
-        title: d.title as string,
-        year: d.year as number,
-        category: d.category as 'Movie' | 'TV Series',
-        genres: (d.genres as string[]) ?? [],
-        rating: d.rating as number,
-        status: d.status as 'Watched' | 'Watching' | 'Watchlist' | 'Rewatched' | 'Dropped',
-        watchDate: (d.watchDate as string) ?? null,
-        posterColor: (d.posterColor as string) ?? '#1e293b',
-        posterUrl: (d.posterUrl as string) ?? '',
-        review: (d.review as string) ?? '',
-        quote: (d.quote as string) ?? '',
+      return docs.map((d: any) => ({
+        id: d._id.toString(),
+        title: d.title,
+        year: d.year,
+        category: d.category,
+        genres: d.genres ?? [],
+        rating: d.rating,
+        status: d.status,
+        watchDate: d.watchDate ?? null,
+        posterColor: d.posterColor ?? '#1e293b',
+        posterUrl: d.posterUrl ?? '',
+        review: d.review ?? '',
+        quote: d.quote ?? '',
       }));
     }
   } catch (e) {
