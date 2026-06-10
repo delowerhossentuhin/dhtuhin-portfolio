@@ -66,8 +66,8 @@ export function Hero() {
               transition={{ duration: 0.7, delay: 0.1 }}
               className="mt-6 max-w-xl text-pretty text-base leading-relaxed text-ink-300 sm:text-lg"
             >
-              I&apos;m {profile.shortName} — a final-year Computer Science &amp; Engineering
-              student at AIUB working on{' '}
+              I&apos;m {profile.shortName} — a Computer Science Graduate
+              from American International University-Bangladesh working on{' '}
               <span className="text-white">privacy-preserving machine learning</span>,
               medical-imaging AI, and the interpretability problems that make all of it
               deployable.
