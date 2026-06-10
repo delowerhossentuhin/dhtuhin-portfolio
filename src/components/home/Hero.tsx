@@ -106,10 +106,7 @@ export function Hero() {
                 className="group inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-medium text-ink-950 transition hover:bg-ink-100"
               >
                 View Research
-                <ArrowRight
-                  size={14}
-                  className="transition-transform group-hover:translate-x-0.5"
-                />
+                <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
               </Link>
               <a
                 href={profile.resumePath}
@@ -126,7 +123,7 @@ export function Hero() {
               </Link>
             </motion.div>
 
-            {/* Quick stats */}
+            {/* Quick stats — no CGPA */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -134,8 +131,8 @@ export function Hero() {
               className="mt-14 grid max-w-lg grid-cols-3 gap-6 border-t border-white/5 pt-6"
             >
               <Stat value="7" label="Publications" suffix="incl. Q1" />
-              <Stat value="3.95" label="CGPA" suffix="/ 4.00" />
-              <Stat value="3" label="Research labs" suffix="active" />
+              <Stat value="3" label="Research Labs" suffix="active" />
+              <Stat value="Fall 26" label="PhD Target" suffix="intake" />
             </motion.div>
           </div>
 
@@ -183,7 +180,6 @@ function PortraitChip() {
           className="object-cover object-top"
           sizes="(max-width: 1024px) 100vw, 500px"
         />
-        {/* Color grade overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/30 to-transparent mix-blend-multiply" />
         <div className="absolute inset-0 bg-gradient-to-br from-sky-500/10 via-transparent to-azure-700/10" />
       </div>
@@ -206,9 +202,9 @@ function PortraitChip() {
         className="glass-strong absolute -right-3 bottom-16 hidden rounded-2xl px-3 py-2 shadow-glow sm:block"
       >
         <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-sky-300">
-          B.Sc. CSE · AIUB
+          PhD Target · Fall 2026
         </p>
-        <p className="text-xs text-white">CGPA 3.95 / 4.00</p>
+        <p className="text-xs text-white">Federated Learning · Medical AI</p>
       </motion.div>
 
       {/* Bottom caption */}
