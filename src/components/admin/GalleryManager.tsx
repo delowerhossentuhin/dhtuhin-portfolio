@@ -5,6 +5,8 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Edit3, Trash2, Save, X, Loader2, AlertCircle, Upload } from 'lucide-react';
 
+const CATEGORIES = ['Academic', 'Campus Life', 'Personal', 'Family', 'Friends', 'Events/Conferences'];
+
 type GRecord = {
   _id?: string;
   id?: string;
@@ -174,7 +176,6 @@ export function GalleryManager() {
               </div>
 
               <div className="space-y-4">
-
                 {/* Upload button */}
                 <Field label="Upload image">
                   <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
@@ -191,11 +192,11 @@ export function GalleryManager() {
                 {/* Preview */}
                 {editing.src && (
                   <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-white/10">
-                    <Image src={editing.src} alt="preview" fill className="object-cover" />
+                    <Image src={editing.src} alt="preview" fill className="object-cover" unoptimized />
                   </div>
                 )}
 
-                {/* OR paste URL manually */}
+                {/* Or paste URL */}
                 <Field label="Or paste image URL">
                   <input
                     className="gm-input"
@@ -214,9 +215,18 @@ export function GalleryManager() {
                 <Field label="Caption">
                   <input className="gm-input" value={editing.caption ?? ''} onChange={(e) => setEditing({ ...editing, caption: e.target.value })} />
                 </Field>
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Category">
-                    <input className="gm-input" value={editing.category ?? ''} onChange={(e) => setEditing({ ...editing, category: e.target.value })} />
+                    <select
+                      className="gm-input"
+                      value={editing.category ?? 'Personal'}
+                      onChange={(e) => setEditing({ ...editing, category: e.target.value })}
+                    >
+                      {CATEGORIES.map((c) => (
+                        <option key={c} value={c} className="bg-ink-950">{c}</option>
+                      ))}
+                    </select>
                   </Field>
                   <Field label="Span">
                     <select className="gm-input" value={editing.span ?? 'normal'} onChange={(e) => setEditing({ ...editing, span: e.target.value as GRecord['span'] })}>
