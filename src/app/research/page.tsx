@@ -5,7 +5,7 @@ import { researchInterests, publications as seedPublications, profile } from '@/
 import { PageHeader } from '@/components/ui/PageHeader';
 import { PublicationsList } from '@/components/research/PublicationsList';
 import { dbConnect, hasDatabase } from '@/lib/mongodb';
-import { Publication } from '@/models/Publication';
+import { Research } from '@/models/Research';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +25,7 @@ async function getPublications() {
   }
   try {
     await dbConnect();
-    const docs = await Publication.find().sort({ year: -1, createdAt: -1 }).lean();
+    const docs = await Research.find().sort({ year: -1, createdAt: -1 }).lean();
     if (docs.length > 0) {
       return docs.map((d: any) => ({
         id: d._id.toString(),
