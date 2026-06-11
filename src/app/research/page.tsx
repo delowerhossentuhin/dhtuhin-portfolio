@@ -1,16 +1,61 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import * as Icons from 'lucide-react';
-import { researchInterests, publications, profile } from '@/data/site';
+import { researchInterests, publications as seedPublications, profile } from '@/data/site';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { PublicationsList } from '@/components/research/PublicationsList';
+import { dbConnect, hasDatabase } from '@/lib/mongodb';
+import { Publication } from '@/models/Publication';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Research',
   description: 'Publications, research interests, and active projects.',
 };
 
-export default function ResearchPage() {
+async function getPublications() {
+  if (!hasDatabase) {
+    return seedPublications.map((p) => ({
+      ...p,
+      id: p.id,
+      keywords: [...p.keywords],
+      authors: [...p.authors],
+    }));
+  }
+  try {
+    await dbConnect();
+    const docs = await Publication.find().sort({ year: -1, createdAt: -1 }).lean();
+    if (docs.length > 0) {
+      return docs.map((d: any) => ({
+        id: d._id.toString(),
+        title: d.title,
+        authors: d.authors ?? [],
+        venue: d.venue,
+        publisher: d.publisher ?? '',
+        year: d.year,
+        type: d.type ?? 'conference',
+        tier: d.tier ?? '',
+        doi: d.doi ?? null,
+        url: d.url ?? null,
+        status: d.status ?? 'submitted',
+        abstract: d.abstract,
+        keywords: d.keywords ?? [],
+      }));
+    }
+  } catch (e) {
+    console.error('Research DB fetch failed, falling back to seed:', e);
+  }
+  return seedPublications.map((p) => ({
+    ...p,
+    id: p.id,
+    keywords: [...p.keywords],
+    authors: [...p.authors],
+  }));
+}
+
+export default async function ResearchPage() {
+  const publications = await getPublications();
   const published = publications.filter((p) => p.status === 'published').length;
   const submitted = publications.filter((p) => p.status === 'submitted').length;
   const venues = new Set(publications.map((p) => p.publisher)).size;
@@ -23,7 +68,6 @@ export default function ResearchPage() {
         intro="Seven publications across journals and IEEE conferences — covering federated learning, medical AI, XAI, ensemble methods, and applied NLP. Two more under review."
       />
 
-      {/* Stats strip */}
       <section className="pb-8">
         <div className="container-wide">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -32,7 +76,6 @@ export default function ResearchPage() {
             <Stat label="Under review" value={String(submitted)} sub="submitted" />
             <Stat label="Venues" value={String(venues)} sub="distinct" />
           </div>
-
           <div className="mt-4 flex flex-wrap gap-3 text-xs">
             <ExternalLink href={profile.social.scholar} label="Google Scholar" />
             <ExternalLink href={profile.social.researchgate} label="ResearchGate" />
@@ -41,24 +84,17 @@ export default function ResearchPage() {
         </div>
       </section>
 
-      {/* Research interests */}
       <section className="py-16 sm:py-24">
         <div className="container-wide">
           <div className="max-w-3xl">
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-sky-300">
-              Research interests
-            </p>
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-sky-300">Research interests</p>
             <h2 className="mt-3 h-display text-4xl text-white sm:text-5xl">
               Six directions, one ethic: useful without being reckless.
             </h2>
           </div>
-
           <div className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-white/5 bg-white/[0.02] sm:grid-cols-2 lg:grid-cols-3">
             {researchInterests.map((r) => {
-              const Icon =
-                (Icons[r.icon as keyof typeof Icons] as
-                  | React.ComponentType<{ size?: number; className?: string }>
-                  | undefined) ?? Icons.Sparkles;
+              const Icon = (Icons[r.icon as keyof typeof Icons] as React.ComponentType<{ size?: number; className?: string }> | undefined) ?? Icons.Sparkles;
               return (
                 <div key={r.title} className="bg-ink-950 p-7">
                   <div className="grid h-10 w-10 place-items-center rounded-lg bg-gradient-to-br from-sky-500/15 to-azure-700/20 text-sky-300 ring-1 ring-inset ring-sky-500/20">
@@ -73,28 +109,18 @@ export default function ResearchPage() {
         </div>
       </section>
 
-      {/* Publications list */}
       <section className="py-16 sm:py-24">
         <div className="container-wide">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="max-w-3xl">
-              <p className="font-mono text-xs uppercase tracking-[0.18em] text-sky-300">
-                Publications
-              </p>
-              <h2 className="mt-3 h-display text-4xl text-white sm:text-5xl">
-                The papers, in their own words.
-              </h2>
+              <p className="font-mono text-xs uppercase tracking-[0.18em] text-sky-300">Publications</p>
+              <h2 className="mt-3 h-display text-4xl text-white sm:text-5xl">The papers, in their own words.</h2>
             </div>
-            <Link
-              href={profile.social.scholar}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-sky-300 hover:text-sky-200"
-            >
+            <Link href={profile.social.scholar} target="_blank" rel="noopener noreferrer" className="text-sm text-sky-300 hover:text-sky-200">
               View on Google Scholar →
             </Link>
           </div>
-          <PublicationsList />
+          <PublicationsList publications={publications} />
         </div>
       </section>
     </>
@@ -114,10 +140,7 @@ function Stat({ label, value, sub }: { label: string; value: string; sub: string
 
 function ExternalLink({ href, label }: { href: string; label: string }) {
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
+    <a href={href} target="_blank" rel="noopener noreferrer"
       className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.02] px-3 py-1.5 text-ink-200 transition hover:border-white/20 hover:text-white"
     >
       {label}
