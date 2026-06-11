@@ -15,6 +15,7 @@ const researchSchema = new Schema(
     abstract: { type: String, required: true },
     keywords: { type: [String], default: [] },
     pdfUrl: String,
+    featured: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

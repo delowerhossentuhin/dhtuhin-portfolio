@@ -3,12 +3,19 @@
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowUpRight, FileText } from 'lucide-react';
-import { publications } from '@/data/site';
 import { SectionHeader } from './ResearchAreas';
 
-export function FeaturedPublications() {
-  const featured = publications.filter((p) => p.status === 'published').slice(0, 3);
+type Publication = {
+  id: string;
+  title: string;
+  authors: string[];
+  venue: string;
+  tier?: string;
+  year: number;
+  url?: string | null;
+};
 
+export function FeaturedPublications({ publications }: { publications: Publication[] }) {
   return (
     <section className="relative py-24 sm:py-32">
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-transparent via-azure-900/[0.05] to-transparent" />
@@ -29,7 +36,7 @@ export function FeaturedPublications() {
         </div>
 
         <div className="mt-12 space-y-3">
-          {featured.map((p, i) => (
+          {publications.map((p, i) => (
             <motion.a
               key={p.id}
               href={p.url ?? '#'}
@@ -44,19 +51,13 @@ export function FeaturedPublications() {
               <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-gradient-to-br from-azure-900/40 to-ink-900 ring-1 ring-inset ring-white/10">
                 <span className="font-display text-xl text-white">{p.year}</span>
               </div>
-
               <div className="min-w-0">
                 <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-sky-300">
                   {p.venue} · {p.tier}
                 </p>
-                <h3 className="mt-2 font-display text-lg leading-snug text-white sm:text-xl">
-                  {p.title}
-                </h3>
-                <p className="mt-2 hidden truncate text-sm text-ink-400 sm:block">
-                  {p.authors.join(', ')}
-                </p>
+                <h3 className="mt-2 font-display text-lg leading-snug text-white sm:text-xl">{p.title}</h3>
+                <p className="mt-2 hidden truncate text-sm text-ink-400 sm:block">{p.authors.join(', ')}</p>
               </div>
-
               <div className="hidden items-center gap-1 text-xs text-ink-300 transition group-hover:text-white sm:inline-flex">
                 <FileText size={13} /> DOI <ArrowUpRight size={12} />
               </div>
