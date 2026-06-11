@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { ArrowRight, Download, Sparkles } from 'lucide-react';
 import { profile } from '@/data/site';
+import { HomeCvButton } from './HomeCvButton';
 
 const taglines = [
   'Federated Learning · Privacy at Scale',
@@ -108,13 +109,7 @@ export function Hero() {
                 View Research
                 <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
               </Link>
-              <a
-                href={profile.resumePath}
-                download
-                className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.03] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-white/[0.08]"
-              >
-                <Download size={14} /> Download Resume
-              </a>
+              <HomeCvButton />
               <Link
                 href="/contact"
                 className="inline-flex items-center gap-2 rounded-full px-3 py-2.5 text-sm font-medium text-ink-200 transition hover:text-white"
