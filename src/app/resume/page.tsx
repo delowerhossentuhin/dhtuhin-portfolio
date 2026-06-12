@@ -48,12 +48,18 @@ export default async function ResumePage() {
       <section className="pb-24">
         <div className="container-wide">
           <div className="flex flex-wrap items-center gap-3">
-            <a href={cvUrl} download
+            {/* download attribute only on this button — not on the embedded viewer */}
+            <a
+              href={cvUrl}
+              download="Delower_Hossen_Tuhin_CV.pdf"
               className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-sky-300 to-azure-300 px-5 py-2.5 text-sm font-medium text-ink-950 transition hover:opacity-90"
             >
               <Download size={15} /> Download CV (PDF)
             </a>
-            <a href={cvUrl} target="_blank" rel="noopener noreferrer"
+            <a
+              href={cvUrl}
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.03] px-5 py-2.5 text-sm text-ink-100 transition hover:border-white/30 hover:text-white"
             >
               Open in new tab <ArrowUpRight size={14} />
@@ -64,24 +70,13 @@ export default async function ResumePage() {
           </div>
 
           <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_320px]">
-            {/* Embedded PDF */}
-            <div className="pdf-frame">
-              <object
-                data={`${cvUrl}#view=FitH&toolbar=1`}
-                type="application/pdf"
+            {/* Embedded PDF viewer — NO download attribute here */}
+            <div className="overflow-hidden rounded-2xl border border-white/5">
+              <iframe
+                src={`${cvUrl}#toolbar=0&navpanes=0&scrollbar=1`}
                 className="h-[900px] w-full bg-white"
-                aria-label="Delower Hossen Tuhin CV"
-              >
-                <div className="grid h-full place-items-center bg-ink-900 p-10 text-center">
-                  <div>
-                    <FileText size={28} className="mx-auto text-sky-300" />
-                    <p className="mt-3 text-sm text-ink-200">Your browser can&apos;t preview PDFs inline.</p>
-                    <a href={cvUrl} className="mt-3 inline-flex items-center gap-2 text-sm text-sky-300" target="_blank" rel="noopener noreferrer">
-                      Open the CV directly <ArrowUpRight size={13} />
-                    </a>
-                  </div>
-                </div>
-              </object>
+                title="Delower Hossen Tuhin CV"
+              />
             </div>
 
             {/* Sidebar */}

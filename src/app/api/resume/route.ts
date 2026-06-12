@@ -43,11 +43,12 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(bytes);
     const base64 = `data:application/pdf;base64,${buffer.toString('base64')}`;
 
-    // Upload to Cloudinary — use fixed public_id so it overwrites previous
+    // Upload with .pdf format so Cloudinary serves it correctly
     const result = await cloudinary.uploader.upload(base64, {
       folder: 'portfolio/cv',
       public_id: 'Delower_Hossen_Tuhin_CV',
       resource_type: 'raw',
+      format: 'pdf',
       overwrite: true,
     });
 
