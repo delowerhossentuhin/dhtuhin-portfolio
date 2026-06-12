@@ -43,13 +43,22 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(bytes);
     const base64 = `data:application/pdf;base64,${buffer.toString('base64')}`;
 
-    // Upload with .pdf format so Cloudinary serves it correctly
+    // Delete old version first to avoid caching issues
+    try {
+      await cloudinary.uploader.destroy('portfolio/cv/Delower_Hossen_Tuhin_CV', {
+        resource_type: 'raw',
+      });
+    } catch (_) {}
+
+    // Upload as raw with access_mode public
     const result = await cloudinary.uploader.upload(base64, {
       folder: 'portfolio/cv',
       public_id: 'Delower_Hossen_Tuhin_CV',
       resource_type: 'raw',
       format: 'pdf',
       overwrite: true,
+      access_mode: 'public',
+      type: 'upload',
     });
 
     await dbConnect();
