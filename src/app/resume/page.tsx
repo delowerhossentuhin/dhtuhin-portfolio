@@ -24,7 +24,7 @@ async function getResumeData() {
       Research.countDocuments(),
     ]);
     return {
-      cvUrl: settings?.cvUrl || profile.resumePath,
+      cvUrl: profile.resumePath,
       updatedLabel: settings?.updatedLabel || 'April 2026',
       publicationCount: pubCount || fallback.publicationCount,
     };
@@ -36,13 +36,6 @@ async function getResumeData() {
 
 export default async function ResumePage() {
   const { cvUrl, updatedLabel, publicationCount } = await getResumeData();
-
-  // Use Google Docs viewer for Cloudinary URLs (avoids CORS/auth issues)
-  // For local /public files, use directly
-  const isExternal = cvUrl.startsWith('http');
-  const viewerUrl = isExternal
-    ? `https://docs.google.com/viewer?url=${encodeURIComponent(cvUrl)}&embedded=true`
-    : cvUrl;
 
   return (
     <>
@@ -76,13 +69,13 @@ export default async function ResumePage() {
           </div>
 
           <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_320px]">
-            {/* PDF viewer using Google Docs for external URLs */}
+            {/* Embedded PDF — local file served directly by Vercel */}
             <div className="overflow-hidden rounded-2xl border border-white/5">
-              <iframe
-                src={viewerUrl}
+              <object
+                data={`${cvUrl}#toolbar=1&view=FitH`}
+                type="application/pdf"
                 className="h-[900px] w-full bg-white"
-                title="Delower Hossen Tuhin CV"
-                allow="autoplay"
+                aria-label="Delower Hossen Tuhin CV"
               >
                 <div className="grid h-full place-items-center bg-ink-900 p-10 text-center">
                   <div>
@@ -95,7 +88,7 @@ export default async function ResumePage() {
                     </a>
                   </div>
                 </div>
-              </iframe>
+              </object>
             </div>
 
             {/* Sidebar */}
