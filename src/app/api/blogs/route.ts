@@ -11,7 +11,7 @@ export const runtime = 'nodejs';
 const Schema = z.object({
   slug: z.string().optional(),
   title: z.string().min(1),
-  excerpt: z.string().min(1),
+  excerpt: z.string().optional().default(''),   // ← no longer required
   content: z.string().min(1),
   category: z.string().optional(),
   tags: z.array(z.string()).optional(),
@@ -39,12 +39,10 @@ export async function POST(req: Request) {
   if (denied) return denied;
   if (!hasDatabase)
     return NextResponse.json({ message: 'Database not configured.' }, { status: 503 });
-
   const body = await req.json().catch(() => null);
   const parsed = Schema.safeParse(body);
   if (!parsed.success)
     return NextResponse.json({ message: 'Invalid payload.', issues: parsed.error.issues }, { status: 422 });
-
   await dbConnect();
   const slug = parsed.data.slug || slugify(parsed.data.title);
   const created = await Blog.create({ ...parsed.data, slug });

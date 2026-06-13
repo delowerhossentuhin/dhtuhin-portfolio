@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
-
 import { ArrowLeft, Calendar, Clock, ArrowUpRight } from 'lucide-react';
 import { seedBlogs, profile } from '@/data/site';
 import { formatDate } from '@/lib/utils';
@@ -80,15 +79,24 @@ export default async function BlogDetailPage({ params }: { params: { slug: strin
   }
 
   const related = await getRelated(params.slug, post.category);
+  const hasCoverImage = Boolean((post as any).coverImage);
 
   return (
     <article>
       {/* Hero */}
       <header className="relative overflow-hidden border-b border-white/5">
-        {(post as any).coverImage ? (
+        {/* Fix 1 — show image if exists, otherwise use color gradient */}
+        {hasCoverImage ? (
           <div className="absolute inset-0 -z-10">
-            <Image src={(post as any).coverImage} alt={post.title} fill className="object-cover opacity-30" />
-            <div className="absolute inset-0 bg-gradient-to-b from-ink-950/60 to-ink-950" />
+            <Image
+              src={(post as any).coverImage}
+              alt={post.title}
+              fill
+              className="object-cover opacity-60"
+              priority
+            />
+            {/* Fix 3 — less opacity overlay so image is clearer, keep bottom fade */}
+            <div className="absolute inset-0 bg-gradient-to-b from-ink-950/30 via-ink-950/20 to-ink-950" />
           </div>
         ) : (
           <div className="absolute inset-0 -z-10 opacity-50" style={{
@@ -102,7 +110,7 @@ export default async function BlogDetailPage({ params }: { params: { slug: strin
           </Link>
           <p className="mt-8 font-mono text-xs uppercase tracking-[0.18em] text-sky-300">{post.category}</p>
           <h1 className="mt-3 h-display text-4xl text-white sm:text-5xl md:text-6xl">{post.title}</h1>
-          <p className="mt-5 max-w-2xl text-lg text-ink-200">{post.excerpt}</p>
+          {post.excerpt && <p className="mt-5 max-w-2xl text-lg text-ink-200">{post.excerpt}</p>}
           <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-ink-300">
             <span className="flex items-center gap-1.5"><Calendar size={11} /> {formatDate(post.date)}</span>
             <span className="flex items-center gap-1.5"><Clock size={11} /> {post.readTime} min read</span>
@@ -114,24 +122,22 @@ export default async function BlogDetailPage({ params }: { params: { slug: strin
 
       {/* Body */}
       <div className="container-tight py-16 sm:py-20">
-        <div
-          className="prose-cinema"
-          dangerouslySetInnerHTML={{ __html: post.content }}
-        />
+        <div className="prose-cinema" dangerouslySetInnerHTML={{ __html: post.content }} />
 
         {/* Tags */}
-        <div className="mt-12 flex flex-wrap gap-2 border-t border-white/5 pt-8">
-          {post.tags.map((t: string) => (
-            <span key={t} className="rounded-full border border-white/10 bg-white/[0.02] px-3 py-1 text-xs text-ink-300">#{t}</span>
-          ))}
-        </div>
+        {post.tags?.length > 0 && (
+          <div className="mt-12 flex flex-wrap gap-2 border-t border-white/5 pt-8">
+            {post.tags.map((t: string) => (
+              <span key={t} className="rounded-full border border-white/10 bg-white/[0.02] px-3 py-1 text-xs text-ink-300">#{t}</span>
+            ))}
+          </div>
+        )}
 
-        {/* Author card */}
+        {/* Fix 2 — Author card without the bio line */}
         <div className="mt-12 flex items-start gap-4 rounded-2xl border border-white/5 bg-white/[0.02] p-6">
           <div className="grid h-12 w-12 flex-none place-items-center rounded-full bg-gradient-to-br from-sky-400/30 to-azure-700/30 font-display text-lg text-white">T</div>
           <div>
             <p className="font-display text-base text-white">Written by {profile.name}</p>
-            <p className="mt-1 text-sm text-ink-300">Final-year CSE undergrad at AIUB. Research interests in federated learning, medical AI, and interpretable models. Always reachable.</p>
             <Link href="/contact" className="mt-3 inline-flex items-center gap-1.5 text-xs text-sky-300 hover:text-sky-200">
               Get in touch <ArrowUpRight size={11} />
             </Link>

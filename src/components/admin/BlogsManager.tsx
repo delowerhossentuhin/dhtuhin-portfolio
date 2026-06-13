@@ -118,8 +118,8 @@ export function BlogsManager() {
   async function save() {
     if (!editing) return;
     setErr('');
-    if (!editing.title || !editing.excerpt || !editing.content) {
-      setErr('Title, excerpt, and content are required.');
+    if (!editing.title || !editing.content) {
+      setErr('Title and content are required.');
       return;
     }
     setSaving(true);
