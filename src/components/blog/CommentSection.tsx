@@ -75,7 +75,7 @@ export function CommentSection({ blogSlug }: { blogSlug: string }) {
         <div className="space-y-3">
           <input
             className="cs-input"
-            placeholder="Your name (optional — leave blank to post as Anonymous)"
+            placeholder="Your name (optional — leave blank to post anonymously)"
             value={authorName}
             onChange={(e) => setAuthorName(e.target.value)}
           />
@@ -121,10 +121,7 @@ export function CommentSection({ blogSlug }: { blogSlug: string }) {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-white">
-                      {c.isSubscriber ? c.authorName : `Anonymous ${c.authorNumber ?? ''}`}
-                      {c.isSubscriber && (
-                        <span className="ml-2 rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] text-sky-300">Subscriber</span>
-                      )}
+                      {c.isSubscriber ? c.authorName : `Anonymous${c.authorNumber ? ` ${c.authorNumber}` : ''}`}
                     </p>
                     <p className="text-[11px] text-ink-400">{formatDate(c.createdAt)}</p>
                   </div>

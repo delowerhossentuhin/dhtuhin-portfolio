@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Edit3, Save, X, Loader2, Star, Clock, AlertCircle, Eye, EyeOff, MessageCircle } from 'lucide-react';
+import { Plus, Trash2, Edit3, Save, X, Loader2, Star, Clock, AlertCircle, Eye, EyeOff, MessageCircle, Upload, Bell } from 'lucide-react';
 import { slugify, formatDate } from '@/lib/utils';
 import { RichTextEditor } from './RichTextEditor';
+import { useRef } from 'react';
 
 type BlogRecord = {
   _id?: string;
@@ -49,7 +50,7 @@ const blank: BlogRecord = {
   published: true,
 };
 
-const CATEGORIES = ['Research', 'Engineering', 'ML', 'Personal', 'Tutorial', 'Opinion'];
+const FIXED_CATEGORIES = ['Research', 'Engineering', 'ML', 'Personal', 'Tutorial', 'Opinion'];
 
 export function BlogsManager() {
   const [items, setItems] = useState<BlogRecord[]>([]);
@@ -60,6 +61,10 @@ export function BlogsManager() {
   const [tab, setTab] = useState<'posts' | 'comments'>('posts');
   const [comments, setComments] = useState<CommentRecord[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [customCategory, setCustomCategory] = useState('');
+  const [sendNotification, setSendNotification] = useState(false);
+  const coverFileRef = useRef<HTMLInputElement>(null);
 
   async function load() {
     setLoading(true);
@@ -93,6 +98,23 @@ export function BlogsManager() {
     return data.url;
   }
 
+  async function handleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !editing) return;
+    setUploadingCover(true);
+    try {
+      const url = await uploadImage(file);
+      setEditing({ ...editing, coverImage: url });
+    } catch { alert('Cover image upload failed.'); }
+    finally { setUploadingCover(false); e.target.value = ''; }
+  }
+
+  function getCategory() {
+    if (!editing) return 'Research';
+    if (editing.category === 'Other') return customCategory.slice(0, 12) || 'Other';
+    return editing.category;
+  }
+
   async function save() {
     if (!editing) return;
     setErr('');
@@ -102,8 +124,10 @@ export function BlogsManager() {
     }
     setSaving(true);
     const id = editing._id;
+    const finalCategory = editing.category === 'Other' ? (customCategory.slice(0, 12) || 'Other') : editing.category;
     const payload = {
       ...editing,
+      category: finalCategory,
       slug: editing.slug || slugify(editing.title),
       tags: Array.from(editing.tags ?? []),
     };
@@ -118,7 +142,21 @@ export function BlogsManager() {
       setErr(data?.message ?? 'Save failed.');
       return;
     }
+
+    // Send notification if checked
+    if (sendNotification && !id) {
+      const savedData = await res.json().catch(() => ({}));
+      const finalSlug = payload.slug;
+      fetch('/api/blogs/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: payload.title, excerpt: payload.excerpt, slug: finalSlug }),
+      }).catch(console.error);
+    }
+
     setEditing(null);
+    setSendNotification(false);
+    setCustomCategory('');
     load();
   }
 
@@ -154,20 +192,14 @@ export function BlogsManager() {
       <div className="mb-6 flex items-center gap-4 border-b border-white/5 pb-4">
         <button onClick={() => setTab('posts')}
           className={`text-sm font-medium transition ${tab === 'posts' ? 'text-white' : 'text-ink-400 hover:text-white'}`}
-        >
-          Posts {items.length > 0 && `(${items.length})`}
-        </button>
+        >Posts {items.length > 0 && `(${items.length})`}</button>
         <button onClick={() => setTab('comments')}
           className={`flex items-center gap-1.5 text-sm font-medium transition ${tab === 'comments' ? 'text-white' : 'text-ink-400 hover:text-white'}`}
-        >
-          <MessageCircle size={14} /> Comments
-        </button>
+        ><MessageCircle size={14} /> Comments {comments.length > 0 && `(${comments.length})`}</button>
         {tab === 'posts' && (
-          <button onClick={() => setEditing({ ...blank })}
+          <button onClick={() => { setEditing({ ...blank }); setSendNotification(false); setCustomCategory(''); }}
             className="ml-auto inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-sky-300 to-azure-300 px-4 py-2 text-sm font-medium text-ink-950 hover:opacity-90"
-          >
-            <Plus size={14} /> New post
-          </button>
+          ><Plus size={14} /> New post</button>
         )}
       </div>
 
@@ -195,7 +227,7 @@ export function BlogsManager() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="font-display text-base text-white">{b.title}</h3>
-                        {b.featured && <span className="flex items-center gap-1 rounded-full bg-amber-300/20 px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] text-amber-200"><Star size={9} /> Featured</span>}
+                        {b.featured && <span className="flex items-center gap-1 rounded-full bg-amber-300/20 px-2 py-0.5 text-[10px] uppercase text-amber-200"><Star size={9} /> Featured</span>}
                         {!b.published && <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-ink-400">Draft</span>}
                         {!isDb && <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-ink-300">Seed</span>}
                       </div>
@@ -207,7 +239,7 @@ export function BlogsManager() {
                       </div>
                     </div>
                     <div className="flex flex-none items-center gap-1.5">
-                      <button onClick={() => setEditing({ ...b, tags: Array.from(b.tags ?? []) })}
+                      <button onClick={() => { setEditing({ ...b, tags: Array.from(b.tags ?? []) }); setCustomCategory(''); setSendNotification(false); }}
                         className="grid h-8 w-8 place-items-center rounded-lg border border-white/10 bg-white/[0.02] text-ink-200 hover:text-white"
                       ><Edit3 size={13} /></button>
                       {isDb && (
@@ -238,9 +270,8 @@ export function BlogsManager() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
                       <span className="text-sm font-medium text-white">
-                        {c.isSubscriber ? c.authorName : `Anonymous ${c.authorNumber ?? ''}`}
+                        {c.isSubscriber ? c.authorName : `Anonymous${c.authorNumber ? ` ${c.authorNumber}` : ''}`}
                       </span>
-                      {c.isSubscriber && <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] text-sky-300">Subscriber</span>}
                       {c.isHidden && <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] text-rose-300">Hidden</span>}
                       <span className="text-[11px] text-ink-400">on /{c.blogSlug}</span>
                       <span className="text-[11px] text-ink-500">{formatDate(c.createdAt)}</span>
@@ -284,14 +315,10 @@ export function BlogsManager() {
               </div>
 
               <div className="space-y-5 px-6 py-6">
-                {/* Title */}
                 <Field label="Title">
-                  <input className="input" value={editing.title}
-                    onChange={(e) => setEditing({ ...editing, title: e.target.value })}
-                  />
+                  <input className="input" value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} />
                 </Field>
 
-                {/* Slug */}
                 <Field label="Slug (URL — auto from title if blank)">
                   <input className="input" value={editing.slug}
                     onChange={(e) => setEditing({ ...editing, slug: e.target.value })}
@@ -299,14 +326,10 @@ export function BlogsManager() {
                   />
                 </Field>
 
-                {/* Excerpt */}
                 <Field label="Excerpt">
-                  <textarea className="input min-h-[80px]" value={editing.excerpt}
-                    onChange={(e) => setEditing({ ...editing, excerpt: e.target.value })}
-                  />
+                  <textarea className="input min-h-[80px]" value={editing.excerpt} onChange={(e) => setEditing({ ...editing, excerpt: e.target.value })} />
                 </Field>
 
-                {/* Rich text editor */}
                 <Field label="Content">
                   <RichTextEditor
                     content={editing.content}
@@ -315,28 +338,48 @@ export function BlogsManager() {
                   />
                 </Field>
 
-                {/* Cover image URL */}
-                <Field label="Cover image URL (optional)">
-                  <input className="input" value={editing.coverImage ?? ''}
-                    placeholder="https://res.cloudinary.com/..."
-                    onChange={(e) => setEditing({ ...editing, coverImage: e.target.value })}
-                  />
+                {/* Cover image upload */}
+                <Field label="Cover image">
+                  <input ref={coverFileRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
+                  <div className="flex items-center gap-3">
+                    <button type="button" onClick={() => coverFileRef.current?.click()} disabled={uploadingCover}
+                      className="inline-flex items-center gap-2 rounded-xl border border-dashed border-white/20 bg-white/[0.02] px-4 py-2.5 text-sm text-ink-300 transition hover:border-sky-400/40 hover:text-white disabled:opacity-50"
+                    >
+                      {uploadingCover ? <><Loader2 size={14} className="animate-spin" /> Uploading…</> : <><Upload size={14} /> Upload cover image</>}
+                    </button>
+                    {editing.coverImage && (
+                      <img src={editing.coverImage} alt="cover" className="h-12 w-16 rounded-lg object-cover border border-white/10" />
+                    )}
+                  </div>
                 </Field>
 
                 <div className="grid gap-4 sm:grid-cols-3">
+                  {/* Category with Other option */}
                   <Field label="Category">
                     <select className="input" value={editing.category}
                       onChange={(e) => setEditing({ ...editing, category: e.target.value })}
                     >
-                      {CATEGORIES.map((c) => <option key={c} value={c} className="bg-ink-950">{c}</option>)}
+                      {FIXED_CATEGORIES.map((c) => <option key={c} value={c} className="bg-ink-950">{c}</option>)}
+                      <option value="Other" className="bg-ink-950">Other…</option>
                     </select>
+                    {editing.category === 'Other' && (
+                      <input
+                        className="input mt-2"
+                        value={customCategory}
+                        onChange={(e) => setCustomCategory(e.target.value.slice(0, 12))}
+                        placeholder="Category name (max 12 chars)"
+                        maxLength={12}
+                      />
+                    )}
                   </Field>
+
                   <Field label="Read time (min)">
                     <input type="number" min={1} className="input" value={editing.readTime}
                       onChange={(e) => setEditing({ ...editing, readTime: Number(e.target.value) })}
                     />
                   </Field>
-                  <Field label="Cover color">
+
+                  <Field label="Cover color (fallback)">
                     <div className="flex items-center gap-2">
                       <input type="color" value={editing.coverColor}
                         onChange={(e) => setEditing({ ...editing, coverColor: e.target.value })}
@@ -368,6 +411,17 @@ export function BlogsManager() {
                       className="accent-sky-400"
                     /> Published
                   </label>
+                  {/* Notify subscribers — only for new posts */}
+                  {!editing._id && (
+                    <label className="flex items-center gap-2 text-sm text-ink-200">
+                      <input type="checkbox" checked={sendNotification}
+                        onChange={(e) => setSendNotification(e.target.checked)}
+                        className="accent-sky-400"
+                      />
+                      <Bell size={13} className="text-sky-300" />
+                      Notify subscribers by email
+                    </label>
+                  )}
                 </div>
 
                 {err && <p className="flex items-center gap-1.5 text-xs text-rose-300"><AlertCircle size={11} /> {err}</p>}
@@ -403,19 +457,8 @@ export function BlogsManager() {
           border-color: rgba(125,211,252,0.4);
           box-shadow: 0 0 0 3px rgba(125,211,252,0.15);
         }
-        :global(.ProseMirror) {
-          min-height: 400px;
-          padding: 1rem;
-          color: white;
-          outline: none;
-        }
-        :global(.ProseMirror p.is-editor-empty:first-child::before) {
-          color: rgba(255,255,255,0.3);
-          content: attr(data-placeholder);
-          float: left;
-          height: 0;
-          pointer-events: none;
-        }
+        :global(.ProseMirror) { min-height: 400px; padding: 1rem; color: white; outline: none; }
+        :global(.ProseMirror p.is-editor-empty:first-child::before) { color: rgba(255,255,255,0.3); content: attr(data-placeholder); float: left; height: 0; pointer-events: none; }
         :global(.ProseMirror h1) { font-size: 2rem; font-weight: bold; margin: 1rem 0 0.5rem; color: white; }
         :global(.ProseMirror h2) { font-size: 1.5rem; font-weight: bold; margin: 1rem 0 0.5rem; color: white; }
         :global(.ProseMirror h3) { font-size: 1.25rem; font-weight: bold; margin: 0.75rem 0 0.5rem; color: white; }
