@@ -8,6 +8,7 @@ import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import Highlight from '@tiptap/extension-highlight';
 import Placeholder from '@tiptap/extension-placeholder';
+import { useCallback, useRef } from 'react';
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
   Heading1, Heading2, Heading3, List, ListOrdered,
@@ -15,7 +16,6 @@ import {
   Image as ImageIcon, Quote, Code, Minus, Highlighter,
   Undo, Redo,
 } from 'lucide-react';
-import { useRef } from 'react';
 
 interface Props {
   content: string;
@@ -25,6 +25,13 @@ interface Props {
 
 export function RichTextEditor({ content, onChange, onImageUpload }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
+  // Keep onChange in a ref so editor doesn't re-render when it changes
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  const handleUpdate = useCallback(({ editor }: any) => {
+    onChangeRef.current(editor.getHTML());
+  }, []); // stable — never recreated
 
   const editor = useEditor({
     extensions: [
@@ -37,20 +44,20 @@ export function RichTextEditor({ content, onChange, onImageUpload }: Props) {
       Placeholder.configure({ placeholder: 'Start writing your post…' }),
     ],
     content,
-    onUpdate: ({ editor }) => onChange(editor.getHTML()),
+    onUpdate: handleUpdate,
     editorProps: {
       attributes: {
         class: 'prose-cinema min-h-[400px] p-4 focus:outline-none',
       },
     },
-  });
+  }, []); // empty deps — editor never recreated on re-render
 
   if (!editor) return null;
 
   function setLink() {
     const url = window.prompt('Enter URL:');
     if (!url) return;
-    editor.chain().focus().setLink({ href: url }).run();
+    editor!.chain().focus().setLink({ href: url }).run();
   }
 
   async function handleImageFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -60,7 +67,6 @@ export function RichTextEditor({ content, onChange, onImageUpload }: Props) {
       const url = await onImageUpload(file);
       editor.chain().focus().setImage({ src: url }).run();
     } else {
-      // fallback: base64
       const reader = new FileReader();
       reader.onload = () => {
         editor.chain().focus().setImage({ src: reader.result as string }).run();
@@ -74,11 +80,12 @@ export function RichTextEditor({ content, onChange, onImageUpload }: Props) {
     <button
       type="button"
       title={title}
-      onClick={onClick}
+      onMouseDown={(e) => {
+        e.preventDefault(); // prevent focus loss from editor
+        onClick();
+      }}
       className={`grid h-8 w-8 place-items-center rounded-lg transition text-sm ${
-        active
-          ? 'bg-sky-400/20 text-sky-300'
-          : 'text-ink-300 hover:bg-white/5 hover:text-white'
+        active ? 'bg-sky-400/20 text-sky-300' : 'text-ink-300 hover:bg-white/5 hover:text-white'
       }`}
     >
       {children}
