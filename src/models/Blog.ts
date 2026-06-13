@@ -4,7 +4,7 @@ const blogSchema = new Schema(
   {
     slug: { type: String, required: true, unique: true, index: true },
     title: { type: String, required: true },
-    excerpt: { type: String, required: true },
+    excerpt: { type: String, default: '' },  // ← no longer required
     content: { type: String, required: true },
     category: { type: String, default: 'Research' },
     tags: { type: [String], default: [] },
