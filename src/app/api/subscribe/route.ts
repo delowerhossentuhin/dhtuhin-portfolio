@@ -7,15 +7,11 @@ export const runtime = 'nodejs';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-function generateOTP(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-// Step 1: Submit name + email → send OTP
+// Subscribe directly — no OTP until domain is verified
 export async function POST(req: Request) {
   if (!hasDatabase) {
     return NextResponse.json({ message: 'Database not configured.' }, { status: 503 });
@@ -33,113 +29,57 @@ export async function POST(req: Request) {
 
   await dbConnect();
 
-  // Check if already subscribed and confirmed
   const existing = await Subscriber.findOne({ email: email.toLowerCase() });
   if (existing && existing.confirmed && !existing.unsubscribedAt) {
     return NextResponse.json({ message: 'This email is already subscribed.' }, { status: 409 });
   }
 
-  const otp = generateOTP();
-  const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
-
-  // Save subscriber as unconfirmed with OTP
+  // Save as confirmed directly
   await Subscriber.findOneAndUpdate(
     { email: email.toLowerCase() },
     {
       name: name.trim(),
-      otp,
-      otpExpiresAt,
-      confirmed: false,
+      confirmed: true,
+      otp: null,
+      otpExpiresAt: null,
       unsubscribedAt: null,
     },
     { upsert: true, new: true }
   );
 
-  // Send OTP via Resend
-  // NOTE: With free Resend account (no verified domain),
-  // emails can only be sent TO the Resend account owner's email.
-  // To send to anyone, add a verified domain at resend.com/domains
+  // Try sending welcome email — silently ignore if it fails (domain not verified)
   try {
-    const { error } = await resend.emails.send({
+    await resend.emails.send({
       from: process.env.CONTACT_FROM_EMAIL ?? 'onboarding@resend.dev',
       to: email,
-      subject: 'Your verification code — Delower Hossen Tuhin',
+      subject: 'Subscribed — Delower Hossen Tuhin',
       html: `
         <!DOCTYPE html>
         <html>
         <body style="margin:0;padding:0;background:#060b1a;font-family:monospace;">
           <div style="max-width:480px;margin:40px auto;padding:2rem;background:#0d1526;border-radius:16px;border:1px solid rgba(255,255,255,0.08);">
-            <p style="color:#7dd3fc;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;margin:0 0 1rem;">Email Verification</p>
-            <h2 style="color:white;margin:0 0 0.5rem;font-size:1.5rem;">Hi ${name.trim()},</h2>
+            <p style="color:#7dd3fc;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;margin:0 0 1rem;">Subscription Confirmed</p>
+            <h2 style="color:white;margin:0 0 0.5rem;">Hi ${name.trim()},</h2>
             <p style="color:#94a3b8;margin:0 0 1.5rem;line-height:1.6;">
-              Use the code below to verify your subscription to Delower Hossen Tuhin's blog.
+              You're now subscribed to Delower Hossen Tuhin's blog. You'll get an email whenever a new post lands — no marketing, no schedule.
             </p>
-            <div style="background:rgba(125,211,252,0.08);border:1px solid rgba(125,211,252,0.2);border-radius:12px;padding:1.5rem;text-align:center;margin-bottom:1.5rem;">
-              <p style="color:#94a3b8;font-size:12px;margin:0 0 0.5rem;letter-spacing:0.1em;">YOUR VERIFICATION CODE</p>
-              <p style="color:white;font-size:2.5rem;font-weight:bold;letter-spacing:0.5rem;margin:0;">${otp}</p>
-              <p style="color:#64748b;font-size:11px;margin:0.5rem 0 0;">Expires in 10 minutes</p>
-            </div>
             <p style="color:#475569;font-size:12px;margin:0;">
-              If you didn't request this, you can safely ignore this email.
+              To unsubscribe anytime, just reply to any email.
             </p>
           </div>
         </body>
         </html>
       `,
     });
-
-    if (error) {
-      console.error('[subscribe] Resend error:', error);
-      // Clean up the unconfirmed subscriber if email fails
-      await Subscriber.deleteOne({ email: email.toLowerCase(), confirmed: false });
-      return NextResponse.json(
-        { message: 'Failed to send verification email. Please try again.' },
-        { status: 500 }
-      );
-    }
   } catch (e) {
-    console.error('[subscribe] email exception:', e);
-    await Subscriber.deleteOne({ email: email.toLowerCase(), confirmed: false });
-    return NextResponse.json(
-      { message: 'Failed to send verification email. Please try again.' },
-      { status: 500 }
-    );
+    // Silently ignore — user is still subscribed
+    console.error('[subscribe] welcome email failed (likely no verified domain):', e);
   }
 
-  return NextResponse.json({ message: 'OTP sent. Check your email.' });
+  return NextResponse.json({ message: 'Subscribed successfully! Welcome.' });
 }
 
-// Step 2: Verify OTP → confirm subscription
+// Keep PUT for future OTP verification when domain is ready
 export async function PUT(req: Request) {
-  if (!hasDatabase) {
-    return NextResponse.json({ message: 'Database not configured.' }, { status: 503 });
-  }
-
-  const body = await req.json().catch(() => null);
-  const { email, otp } = body ?? {};
-
-  if (!email || !otp) {
-    return NextResponse.json({ message: 'Email and OTP required.' }, { status: 400 });
-  }
-
-  await dbConnect();
-  const subscriber = await Subscriber.findOne({ email: email.toLowerCase() });
-
-  if (!subscriber) {
-    return NextResponse.json({ message: 'Subscriber not found. Please start again.' }, { status: 404 });
-  }
-  if (subscriber.otp !== otp) {
-    return NextResponse.json({ message: 'Invalid code. Please check and try again.' }, { status: 400 });
-  }
-  if (subscriber.otpExpiresAt && new Date() > subscriber.otpExpiresAt) {
-    return NextResponse.json({ message: 'Code expired. Please subscribe again.' }, { status: 400 });
-  }
-
-  await Subscriber.findByIdAndUpdate(subscriber._id, {
-    confirmed: true,
-    otp: null,
-    otpExpiresAt: null,
-  });
-
-  return NextResponse.json({ message: 'Successfully subscribed! Welcome.' });
+  return NextResponse.json({ message: 'OTP verification not active yet.' }, { status: 410 });
 }
