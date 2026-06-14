@@ -17,72 +17,122 @@ function isValidEmail(email: string): boolean {
 
 // Step 1: Submit name + email → send OTP
 export async function POST(req: Request) {
-  if (!hasDatabase) return NextResponse.json({ message: 'Database not configured.' }, { status: 503 });
+  if (!hasDatabase) {
+    return NextResponse.json({ message: 'Database not configured.' }, { status: 503 });
+  }
+
   const body = await req.json().catch(() => null);
   const { name, email } = body ?? {};
 
-  if (!name?.trim()) return NextResponse.json({ message: 'Name is required.' }, { status: 400 });
-  if (!email || !isValidEmail(email)) return NextResponse.json({ message: 'Please enter a valid email address.' }, { status: 400 });
+  if (!name?.trim()) {
+    return NextResponse.json({ message: 'Name is required.' }, { status: 400 });
+  }
+  if (!email || !isValidEmail(email)) {
+    return NextResponse.json({ message: 'Please enter a valid email address.' }, { status: 400 });
+  }
 
   await dbConnect();
 
-  // Check if already subscribed
+  // Check if already subscribed and confirmed
   const existing = await Subscriber.findOne({ email: email.toLowerCase() });
   if (existing && existing.confirmed && !existing.unsubscribedAt) {
     return NextResponse.json({ message: 'This email is already subscribed.' }, { status: 409 });
   }
 
   const otp = generateOTP();
-  const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
 
-  // Upsert subscriber with OTP
+  // Save subscriber as unconfirmed with OTP
   await Subscriber.findOneAndUpdate(
     { email: email.toLowerCase() },
-    { name: name.trim(), otp, otpExpiresAt, confirmed: false, unsubscribedAt: null },
+    {
+      name: name.trim(),
+      otp,
+      otpExpiresAt,
+      confirmed: false,
+      unsubscribedAt: null,
+    },
     { upsert: true, new: true }
   );
 
-  // Send OTP email
+  // Send OTP via Resend
+  // NOTE: With free Resend account (no verified domain),
+  // emails can only be sent TO the Resend account owner's email.
+  // To send to anyone, add a verified domain at resend.com/domains
   try {
-    await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: process.env.CONTACT_FROM_EMAIL ?? 'onboarding@resend.dev',
       to: email,
-      subject: 'Verify your subscription — Delower Hossen Tuhin',
+      subject: 'Your verification code — Delower Hossen Tuhin',
       html: `
-        <div style="font-family: monospace; max-width: 480px; margin: 0 auto; padding: 2rem; background: #060b1a; color: white; border-radius: 12px;">
-          <h2 style="color: #7dd3fc; margin-bottom: 1rem;">Verify your email</h2>
-          <p style="color: #94a3b8;">Hi ${name.trim()},</p>
-          <p style="color: #94a3b8;">Your one-time verification code is:</p>
-          <div style="font-size: 2.5rem; font-weight: bold; color: white; letter-spacing: 0.5rem; text-align: center; padding: 1.5rem; background: rgba(125,211,252,0.1); border-radius: 8px; margin: 1rem 0;">
-            ${otp}
+        <!DOCTYPE html>
+        <html>
+        <body style="margin:0;padding:0;background:#060b1a;font-family:monospace;">
+          <div style="max-width:480px;margin:40px auto;padding:2rem;background:#0d1526;border-radius:16px;border:1px solid rgba(255,255,255,0.08);">
+            <p style="color:#7dd3fc;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;margin:0 0 1rem;">Email Verification</p>
+            <h2 style="color:white;margin:0 0 0.5rem;font-size:1.5rem;">Hi ${name.trim()},</h2>
+            <p style="color:#94a3b8;margin:0 0 1.5rem;line-height:1.6;">
+              Use the code below to verify your subscription to Delower Hossen Tuhin's blog.
+            </p>
+            <div style="background:rgba(125,211,252,0.08);border:1px solid rgba(125,211,252,0.2);border-radius:12px;padding:1.5rem;text-align:center;margin-bottom:1.5rem;">
+              <p style="color:#94a3b8;font-size:12px;margin:0 0 0.5rem;letter-spacing:0.1em;">YOUR VERIFICATION CODE</p>
+              <p style="color:white;font-size:2.5rem;font-weight:bold;letter-spacing:0.5rem;margin:0;">${otp}</p>
+              <p style="color:#64748b;font-size:11px;margin:0.5rem 0 0;">Expires in 10 minutes</p>
+            </div>
+            <p style="color:#475569;font-size:12px;margin:0;">
+              If you didn't request this, you can safely ignore this email.
+            </p>
           </div>
-          <p style="color: #64748b; font-size: 0.875rem;">This code expires in 10 minutes. If you didn't request this, ignore this email.</p>
-        </div>
+        </body>
+        </html>
       `,
     });
+
+    if (error) {
+      console.error('[subscribe] Resend error:', error);
+      // Clean up the unconfirmed subscriber if email fails
+      await Subscriber.deleteOne({ email: email.toLowerCase(), confirmed: false });
+      return NextResponse.json(
+        { message: 'Failed to send verification email. Please try again.' },
+        { status: 500 }
+      );
+    }
   } catch (e) {
-    console.error('[subscribe] email send failed:', e);
-    return NextResponse.json({ message: 'Failed to send verification email.' }, { status: 500 });
+    console.error('[subscribe] email exception:', e);
+    await Subscriber.deleteOne({ email: email.toLowerCase(), confirmed: false });
+    return NextResponse.json(
+      { message: 'Failed to send verification email. Please try again.' },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ message: 'OTP sent. Check your email.' });
 }
 
-// Step 2: Verify OTP
+// Step 2: Verify OTP → confirm subscription
 export async function PUT(req: Request) {
-  if (!hasDatabase) return NextResponse.json({ message: 'Database not configured.' }, { status: 503 });
+  if (!hasDatabase) {
+    return NextResponse.json({ message: 'Database not configured.' }, { status: 503 });
+  }
+
   const body = await req.json().catch(() => null);
   const { email, otp } = body ?? {};
 
-  if (!email || !otp) return NextResponse.json({ message: 'Email and OTP required.' }, { status: 400 });
+  if (!email || !otp) {
+    return NextResponse.json({ message: 'Email and OTP required.' }, { status: 400 });
+  }
 
   await dbConnect();
   const subscriber = await Subscriber.findOne({ email: email.toLowerCase() });
 
-  if (!subscriber) return NextResponse.json({ message: 'Subscriber not found.' }, { status: 404 });
-  if (subscriber.otp !== otp) return NextResponse.json({ message: 'Invalid OTP.' }, { status: 400 });
+  if (!subscriber) {
+    return NextResponse.json({ message: 'Subscriber not found. Please start again.' }, { status: 404 });
+  }
+  if (subscriber.otp !== otp) {
+    return NextResponse.json({ message: 'Invalid code. Please check and try again.' }, { status: 400 });
+  }
   if (subscriber.otpExpiresAt && new Date() > subscriber.otpExpiresAt) {
-    return NextResponse.json({ message: 'OTP expired. Please try again.' }, { status: 400 });
+    return NextResponse.json({ message: 'Code expired. Please subscribe again.' }, { status: 400 });
   }
 
   await Subscriber.findByIdAndUpdate(subscriber._id, {
@@ -91,5 +141,5 @@ export async function PUT(req: Request) {
     otpExpiresAt: null,
   });
 
-  return NextResponse.json({ message: 'Successfully subscribed!' });
+  return NextResponse.json({ message: 'Successfully subscribed! Welcome.' });
 }
