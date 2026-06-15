@@ -26,8 +26,17 @@ export function Navbar() {
   const [open, setOpen] = useState(false);
   const [showSubscribe, setShowSubscribe] = useState(false);
 
+  // Fix: update pathname on every navigation
   useEffect(() => {
-    setPathname(window.location.pathname);
+    function update() { setPathname(window.location.pathname); }
+    update();
+    window.addEventListener('popstate', update);
+    // Also poll for client-side navigation (Next.js router changes don't fire popstate)
+    const interval = setInterval(update, 300);
+    return () => {
+      window.removeEventListener('popstate', update);
+      clearInterval(interval);
+    };
   }, []);
 
   const isAdmin = pathname?.startsWith('/admin');
@@ -42,6 +51,11 @@ export function Navbar() {
   useEffect(() => { setOpen(false); }, [pathname]);
 
   if (isAdmin) return null;
+
+  function isActive(href: string) {
+    if (href === '/') return pathname === '/';
+    return pathname?.startsWith(href);
+  }
 
   return (
     <>
@@ -66,10 +80,12 @@ export function Navbar() {
             {/* Desktop links */}
             <ul className="hidden items-center gap-1 lg:flex">
               {links.map((l) => {
-                const active = l.href === '/' ? pathname === '/' : pathname?.startsWith(l.href);
+                const active = isActive(l.href);
                 return (
                   <li key={l.href}>
-                    <Link href={l.href}
+                    <Link
+                      href={l.href}
+                      onClick={() => setPathname(l.href)}
                       className={cn('relative rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors', active ? 'text-white' : 'text-ink-300 hover:text-white')}
                     >
                       {active && (
@@ -85,17 +101,16 @@ export function Navbar() {
               })}
             </ul>
 
-            {/* CTA buttons + mobile toggle */}
+            {/* CTA + mobile toggle */}
             <div className="flex items-center gap-2">
-              {/* Subscribe button */}
               <button
                 onClick={() => setShowSubscribe(true)}
                 className="hidden rounded-full border border-white/15 bg-white/[0.03] px-4 py-1.5 text-[13px] font-medium text-white transition hover:bg-white/[0.08] lg:inline-flex"
               >
                 Subscribe
               </button>
-              {/* Get in touch */}
               <Link href="/contact"
+                onClick={() => setPathname('/contact')}
                 className="hidden rounded-full bg-white px-4 py-1.5 text-[13px] font-medium text-ink-950 transition hover:bg-ink-100 lg:inline-flex"
               >
                 Get in touch
@@ -119,10 +134,11 @@ export function Navbar() {
               >
                 <ul className="space-y-1">
                   {links.map((l) => {
-                    const active = l.href === '/' ? pathname === '/' : pathname?.startsWith(l.href);
+                    const active = isActive(l.href);
                     return (
                       <li key={l.href}>
                         <Link href={l.href}
+                          onClick={() => setPathname(l.href)}
                           className={cn('flex items-center justify-between rounded-xl px-3 py-2.5 text-sm transition',
                             active ? 'bg-white/[0.06] text-white' : 'text-ink-300 hover:bg-white/[0.04] hover:text-white'
                           )}
@@ -133,7 +149,6 @@ export function Navbar() {
                       </li>
                     );
                   })}
-                  {/* Subscribe in mobile menu too */}
                   <li>
                     <button onClick={() => { setOpen(false); setShowSubscribe(true); }}
                       className="flex w-full items-center rounded-xl px-3 py-2.5 text-sm text-sky-300 hover:bg-white/[0.04] transition"
@@ -148,7 +163,6 @@ export function Navbar() {
         </div>
       </header>
 
-      {/* Subscribe modal */}
       <SubscribeModal open={showSubscribe} onClose={() => setShowSubscribe(false)} />
     </>
   );

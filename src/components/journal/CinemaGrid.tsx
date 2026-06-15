@@ -118,7 +118,6 @@ export function CinemaGrid({ entries }: { entries: CinemaEntry[] }) {
                 transition={{ duration: 0.35, delay: i * 0.03 }}
                 className="group relative aspect-[2/3] overflow-hidden rounded-xl border border-white/5 bg-white/[0.02] text-left transition hover:border-amber-300/30"
               >
-                {/* Poster */}
                 {e.posterUrl ? (
                   <img src={e.posterUrl} alt={e.title} className="absolute inset-0 h-full w-full object-cover" />
                 ) : (
@@ -127,7 +126,6 @@ export function CinemaGrid({ entries }: { entries: CinemaEntry[] }) {
                 <div className="absolute inset-0 bg-tech-grid opacity-20" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
 
-                {/* Badges */}
                 <div className="absolute left-2.5 right-2.5 top-2.5 flex items-center justify-between gap-2">
                   <span className="flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-[9px] uppercase tracking-[0.16em] text-white backdrop-blur-sm">
                     {e.category === 'Movie' ? <Film size={9} /> : <Tv size={9} />}
@@ -138,14 +136,12 @@ export function CinemaGrid({ entries }: { entries: CinemaEntry[] }) {
                   {e.status === 'Rewatched' && <span className="flex items-center gap-1 rounded-full bg-sky-300/90 px-2 py-0.5 text-[9px] uppercase tracking-[0.16em] text-ink-950"><RotateCw size={9} /> Re</span>}
                 </div>
 
-                {/* Title */}
                 <div className="absolute inset-x-3 bottom-3">
                   <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-amber-300/80">{e.year}</p>
                   <h3 className="mt-1 font-display text-base leading-tight text-white sm:text-lg">{e.title}</h3>
                   <div className="mt-2"><StarRow rating={e.rating} /></div>
                 </div>
 
-                {/* Hover */}
                 <div className="absolute inset-0 grid place-items-center bg-black/70 px-4 opacity-0 transition group-hover:opacity-100">
                   <p className="line-clamp-6 text-center text-[11px] leading-relaxed text-ink-100">{e.review}</p>
                 </div>
@@ -156,16 +152,19 @@ export function CinemaGrid({ entries }: { entries: CinemaEntry[] }) {
         </div>
       </section>
 
-      {/* Modal */}
+      {/* Modal — Fix: overflow-y-auto + max-h so it scrolls properly */}
       <AnimatePresence>
         {open && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[100] grid place-items-center bg-black/90 p-4 backdrop-blur-md"
+            className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/90 p-4 backdrop-blur-md sm:items-center"
             onClick={() => setOpen(null)}
           >
-            <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="relative w-full max-w-3xl overflow-hidden rounded-2xl border border-white/10 bg-ink-950"
+              className="relative my-4 w-full max-w-3xl overflow-hidden overflow-y-auto rounded-2xl border border-white/10 bg-ink-950 max-h-[88vh]"
               onClick={(e) => e.stopPropagation()}
             >
               <button onClick={() => setOpen(null)} aria-label="Close"
@@ -174,7 +173,7 @@ export function CinemaGrid({ entries }: { entries: CinemaEntry[] }) {
                 <X size={15} />
               </button>
 
-              {/* Modal header — image or gradient */}
+              {/* Modal poster */}
               <div className="relative h-48 sm:h-56 overflow-hidden">
                 {open.posterUrl ? (
                   <img src={open.posterUrl} alt={open.title} className="h-full w-full object-cover object-top" />
