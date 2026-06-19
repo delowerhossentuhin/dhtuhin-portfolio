@@ -5,6 +5,7 @@ import { requireAdmin } from '@/lib/requireAdmin';
 import { profile, education, achievements, memberships, languages } from '@/data/site';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 function seedFallback() {
   return {
