@@ -18,10 +18,12 @@ import {
   X,
   Globe,
   UserCircle,
+  Sparkles,
 } from 'lucide-react';
 
 const nav = [
   { href: '/admin', label: 'Overview', icon: LayoutDashboard, exact: true },
+  { href: '/admin/hero', label: 'Homepage Hero', icon: Sparkles },
   { href: '/admin/about', label: 'About', icon: UserCircle },
   { href: '/admin/blogs', label: 'Blog', icon: FileText },
   { href: '/admin/research', label: 'Research', icon: Microscope },
