@@ -73,7 +73,7 @@ export function Navbar() {
               </span>
               <span className="flex flex-col leading-tight">
                 <span className="text-sm font-medium tracking-tight text-white">{profile.shortName}</span>
-                <span className="hidden text-[10px] uppercase tracking-[0.18em] text-ink-400 sm:inline">Research · Portfolio</span>
+                <span className="hidden text-[10px] uppercase tracking-[0.18em] text-ink-400 sm:inline">Academic Portfolio</span>
               </span>
             </Link>
 
