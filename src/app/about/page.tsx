@@ -64,8 +64,8 @@ export default async function AboutPage() {
     <>
       <PageHeader
         eyebrow="About"
-        title="A short biography, in three paragraphs."
-        intro="Researcher in training. Built where rigor meets curiosity. Below is the long version — including the parts that don't fit on a CV."
+        title="A Story Still in Progress."
+        intro="A personal account of the interests, experiences, and ambitions that exist beyond formal achievements."
       />
 
       {/* Biography + portrait */}
