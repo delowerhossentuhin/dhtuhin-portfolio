@@ -64,7 +64,7 @@ export default async function AboutPage() {
     <>
       <PageHeader
         eyebrow="About"
-        title="A Story Still in Progress."
+        title="A Story Still in Progress...."
         intro="A personal account of the interests, experiences, and ambitions that exist beyond formal achievements."
       />
 
