@@ -98,12 +98,14 @@ export function Footer() {
 
         <div className="mt-16 flex flex-col items-start justify-between gap-4 border-t border-white/5 pt-8 text-xs text-ink-400 sm:flex-row sm:items-center">
           <p>
-            © {year} {profile.name}. Built in Next.js, designed against templates.
+            © {year} {profile.name}. All rights reserved.
           </p>
           <p className="font-mono">
-            <span className="text-ink-300">Dhaka, Bangladesh</span>
-            <span className="mx-3 text-ink-600">·</span>
-            <span>Open to PhD applications · Fall 2026</span>
+            <span className="text-ink-300">Dhaka, Bangladesh.</span>
+            
+            {/* <span className="mx-3 text-ink-600">·</span>
+            <span>Open to PhD applications · Fall 2026</span> */}
+  
           </p>
         </div>
       </div>
